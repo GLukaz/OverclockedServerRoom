@@ -1,15 +1,8 @@
 import * as Phaser from "phaser";
 import { Server } from "../entities/Server";
+import { EventConfig } from "../config/levels";
 
 type Phase = "idle" | "telegraph" | "active";
-
-const TELEGRAPH_MS = 4000;
-const SURGE_DURATION_MS = 20000;
-const SURGE_HEAT_MULT = 2.5;
-const SURGE_REWARD_OVERCLOCK = 15;
-const FIRST_EVENT_DELAY_MS = 20000;
-const GAP_EARLY_MS = 45000;
-const GAP_LATE_MS = 18000;
 
 export interface EventManagerCallbacks {
   onBanner(msg: string, color: string): void;
@@ -20,11 +13,17 @@ export interface EventManagerCallbacks {
 export class EventManager {
   private phase: Phase = "idle";
   private phaseTimer = 0;
-  private nextEventIn = FIRST_EVENT_DELAY_MS;
+  private nextEventIn: number;
   private target: Server | null = null;
   private lastOverclock = 0;
 
-  constructor(private scene: Phaser.Scene, private cb: EventManagerCallbacks) {}
+  constructor(
+    _scene: Phaser.Scene,
+    private cb: EventManagerCallbacks,
+    private cfg: EventConfig
+  ) {
+    this.nextEventIn = cfg.firstEventDelayMs;
+  }
 
   update(delta: number, servers: Server[], overclock: number) {
     this.lastOverclock = overclock;
@@ -64,7 +63,7 @@ export class EventManager {
 
   private startTelegraph(target: Server) {
     this.phase = "telegraph";
-    this.phaseTimer = TELEGRAPH_MS;
+    this.phaseTimer = this.cfg.telegraphMs;
     this.target = target;
     target.setSurgeState("telegraph");
     this.cb.onBanner(`AI DEMAND SURGE → S${target.id}`, "#ffcc22");
@@ -78,8 +77,8 @@ export class EventManager {
       return;
     }
     this.phase = "active";
-    this.phaseTimer = SURGE_DURATION_MS;
-    this.target.setSurgeState("active", SURGE_HEAT_MULT);
+    this.phaseTimer = this.cfg.surgeDurationMs;
+    this.target.setSurgeState("active", this.cfg.surgeHeatMult);
     this.cb.onBanner("SURGE LIVE!", "#ffaa22");
   }
 
@@ -88,11 +87,11 @@ export class EventManager {
       this.target.setSurgeState("off");
       if (success) {
         this.cb.onLog(
-          `S${this.target.id} held the surge  +${SURGE_REWARD_OVERCLOCK}% overclock`,
+          `S${this.target.id} held the surge  +${this.cfg.surgeRewardOverclock}% overclock`,
           "#2ee66b"
         );
-        this.cb.onBanner(`SURGE HANDLED +${SURGE_REWARD_OVERCLOCK}%`, "#2ee66b");
-        this.cb.onOverclockBonus(SURGE_REWARD_OVERCLOCK);
+        this.cb.onBanner(`SURGE HANDLED +${this.cfg.surgeRewardOverclock}%`, "#2ee66b");
+        this.cb.onOverclockBonus(this.cfg.surgeRewardOverclock);
       } else {
         this.cb.onLog(`S${this.target.id} lost to surge  no bonus`, "#ff4a4a");
       }
@@ -104,6 +103,6 @@ export class EventManager {
 
   private computeGap() {
     const t = Phaser.Math.Clamp(this.lastOverclock / 100, 0, 1);
-    return Phaser.Math.Linear(GAP_EARLY_MS, GAP_LATE_MS, t);
+    return Phaser.Math.Linear(this.cfg.gapEarlyMs, this.cfg.gapLateMs, t);
   }
 }

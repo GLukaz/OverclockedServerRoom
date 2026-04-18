@@ -9,6 +9,7 @@ export class UIManager {
   private hint: Phaser.GameObjects.Text;
   private buffLabel!: Phaser.GameObjects.Text;
   private eventLog!: Phaser.GameObjects.Text;
+  private levelLabel!: Phaser.GameObjects.Text;
   private readonly barWidth = 200;
 
   constructor(private scene: Phaser.Scene) {
@@ -68,6 +69,15 @@ export class UIManager {
         align: "right",
       })
       .setOrigin(1, 0);
+
+    this.levelLabel = scene.add
+      .text(scene.scale.width / 2, pad, "", {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: "#ffe27a",
+        align: "center",
+      })
+      .setOrigin(0.5, 0);
 
     this.eventLog = scene.add
       .text(scene.scale.width - pad, pad + 28, "", {
@@ -219,6 +229,10 @@ export class UIManager {
 
   setHint(text: string) {
     this.hint.setText(text);
+  }
+
+  setLevel(current: number, total: number, name: string) {
+    this.levelLabel.setText(`LEVEL ${current}/${total}  ${name}`);
   }
 
   setEventLog(msg: string, color: string) {

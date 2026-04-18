@@ -5,6 +5,14 @@ import { DrainValve } from "../entities/DrainValve";
 import { UIManager } from "../ui/UIManager";
 import { EventManager } from "../events/EventManager";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
+import {
+  DEBUG,
+  LEVELS,
+  LevelConfig,
+  getFurthestLevelIndex,
+  markLevelReached,
+  resetFurthestLevelIndex,
+} from "../config/levels";
 
 const WATER_HOLD_MS = 400;
 const VENT_COOLDOWN_MS = 700;
@@ -30,9 +38,12 @@ export class GameScene extends Phaser.Scene {
   private ui!: UIManager;
   private eventManager!: EventManager;
 
+  private levelIndex = 0;
+  private level!: LevelConfig;
   private overclock = 0;
   private waterLevel = 0;
   private gameOver = false;
+  private transitioning = false;
 
   private interactKey!: Phaser.Input.Keyboard.Key;
   private waterKey!: Phaser.Input.Keyboard.Key;
@@ -52,10 +63,25 @@ export class GameScene extends Phaser.Scene {
     super("GameScene");
   }
 
+  init(data: { levelIndex?: number }) {
+    let idx: number;
+    if (data?.levelIndex !== undefined) {
+      idx = data.levelIndex;
+    } else if (DEBUG.startLevel !== null) {
+      idx = DEBUG.startLevel;
+    } else {
+      idx = 0;
+    }
+    this.levelIndex = Phaser.Math.Clamp(idx, 0, LEVELS.length - 1);
+    this.level = LEVELS[this.levelIndex];
+    markLevelReached(this.levelIndex);
+  }
+
   create() {
     this.overclock = 0;
     this.waterLevel = 0;
     this.gameOver = false;
+    this.transitioning = false;
     this.servers = [];
     this.holdMs = 0;
     this.flushFired = false;
@@ -67,20 +93,13 @@ export class GameScene extends Phaser.Scene {
     this.drawBackdrop();
 
     this.platforms = this.physics.add.staticGroup();
-    this.makePlatform(GAME_WIDTH / 2, GAME_HEIGHT - 16, GAME_WIDTH, 32, 0x2a3546);
-    this.makePlatform(230, 410, 220, 18, 0x2a3546);
-    this.makePlatform(GAME_WIDTH - 200, 410, 220, 18, 0x2a3546);
-    this.makePlatform(GAME_WIDTH / 2, 290, 240, 18, 0x2a3546);
+    for (const p of this.level.platforms) {
+      this.makePlatform(p.x, p.y, p.w, p.h, 0x2a3546);
+    }
 
-    const spots: { x: number; y: number }[] = [
-      { x: 380, y: GAME_HEIGHT - 68 },
-      { x: 580, y: GAME_HEIGHT - 68 },
-      { x: 840, y: GAME_HEIGHT - 68 },
-      { x: 230, y: 410 - 45 },
-      { x: GAME_WIDTH - 200, y: 410 - 45 },
-      { x: GAME_WIDTH / 2, y: 290 - 45 },
-    ];
-    spots.forEach((s, i) => this.servers.push(new Server(this, s.x, s.y, i + 1)));
+    this.level.servers.forEach((s, i) =>
+      this.servers.push(new Server(this, s.x, s.y, i + 1))
+    );
 
     this.drain = new DrainValve(this, 90, GAME_HEIGHT - 44);
 
@@ -104,20 +123,25 @@ export class GameScene extends Phaser.Scene {
 
     this.ui = new UIManager(this);
 
-    this.eventManager = new EventManager(this, {
-      onBanner: (m, c) => this.ui.showBanner(m, c),
-      onLog: (m, c) => this.ui.setEventLog(m, c),
-      onOverclockBonus: (amt) => {
-        this.overclock = Phaser.Math.Clamp(this.overclock + amt, 0, 100);
+    this.eventManager = new EventManager(
+      this,
+      {
+        onBanner: (m, c) => this.ui.showBanner(m, c),
+        onLog: (m, c) => this.ui.setEventLog(m, c),
+        onOverclockBonus: (amt) => {
+          this.overclock = Phaser.Math.Clamp(this.overclock + amt, 0, 100);
+        },
       },
-    });
+      this.level.events
+    );
 
     this.interactKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.waterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.drainKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.restartKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
 
-    this.ui.showBanner("OVERCLOCKED", "#ff9a4a");
+    this.ui.setLevel(this.levelIndex + 1, LEVELS.length, this.level.name);
+    this.ui.showBanner(`LEVEL ${this.levelIndex + 1} — ${this.level.name}`, "#ff9a4a");
   }
 
   private drawBackdrop() {
@@ -141,16 +165,35 @@ export class GameScene extends Phaser.Scene {
 
   update(_time: number, delta: number) {
     if (this.gameOver) {
-      if (Phaser.Input.Keyboard.JustDown(this.restartKey)) this.scene.restart();
+      if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
+        const target = DEBUG.restartFromLastLevel
+          ? getFurthestLevelIndex()
+          : DEBUG.startLevel ?? 0;
+        if (!DEBUG.restartFromLastLevel) resetFurthestLevelIndex();
+        this.scene.restart({ levelIndex: target });
+      }
       return;
     }
+    if (this.transitioning) return;
 
     const dt = delta / 1000;
 
-    this.overclock = Phaser.Math.Clamp(this.overclock + dt * 1.2, 0, 100);
+    this.overclock = Phaser.Math.Clamp(
+      this.overclock + dt * this.level.overclockPerSecond,
+      0,
+      100
+    );
     if (this.overclock >= 100) {
-      this.gameOver = true;
-      this.ui.showWin();
+      if (this.levelIndex + 1 < LEVELS.length) {
+        this.transitioning = true;
+        this.ui.showBanner(`LEVEL ${this.levelIndex + 1} CLEARED`, "#2ee66b");
+        this.time.delayedCall(1400, () => {
+          this.scene.restart({ levelIndex: this.levelIndex + 1 });
+        });
+      } else {
+        this.gameOver = true;
+        this.ui.showWin();
+      }
       return;
     }
     const overclockFactor = 1 + this.overclock / 50;
@@ -171,7 +214,11 @@ export class GameScene extends Phaser.Scene {
       s.tickVentCooldown(delta);
       if (s.failed) continue;
       aliveCount++;
-      s.addHeat(dt * (2 + overclockFactor * 1.25) * s.heatMultiplier);
+      s.addHeat(
+        dt *
+          (this.level.serverHeatBase + overclockFactor * this.level.serverHeatFactor) *
+          s.heatMultiplier
+      );
       if (s.heat >= 100) {
         s.fail();
         continue;
