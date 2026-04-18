@@ -1,0 +1,54 @@
+import * as Phaser from "phaser";
+
+export class DrainValve extends Phaser.GameObjects.Container {
+  private base: Phaser.GameObjects.Rectangle;
+  private wheel: Phaser.GameObjects.Arc;
+  private prompt: Phaser.GameObjects.Text;
+  private warning: Phaser.GameObjects.Text;
+  private progress: Phaser.GameObjects.Rectangle;
+  private progressBg: Phaser.GameObjects.Rectangle;
+  public spinning = false;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y);
+    scene.add.existing(this);
+
+    this.base = scene.add.rectangle(0, 12, 56, 24, 0x334a66).setStrokeStyle(2, 0x6690c0);
+    this.wheel = scene.add.circle(0, -4, 14, 0x4ab0ff).setStrokeStyle(2, 0x9fd0ff);
+    this.progressBg = scene.add.rectangle(0, -26, 50, 5, 0x0a0f15).setStrokeStyle(1, 0x3a4a60);
+    this.progress = scene.add.rectangle(-25, -26, 0, 3, 0x4ab0ff).setOrigin(0, 0.5);
+    this.prompt = scene.add
+      .text(0, -42, "[F] drain", { fontFamily: "monospace", fontSize: "12px", color: "#9fd0ff" })
+      .setOrigin(0.5)
+      .setVisible(false);
+
+    this.warning = scene.add
+      .text(0, -58, "! DRAIN !", { fontFamily: "monospace", fontSize: "13px", color: "#ff6a4a" })
+      .setOrigin(0.5)
+      .setVisible(false);
+
+    this.add([this.base, this.wheel, this.progressBg, this.progress, this.prompt, this.warning]);
+  }
+
+  showWarning(show: boolean) {
+    this.warning.setVisible(show);
+    if (show) {
+      const pulse = 0.6 + 0.4 * Math.sin(this.scene.time.now / 120);
+      this.warning.setAlpha(pulse);
+    }
+  }
+
+  showPrompt(show: boolean) {
+    this.prompt.setVisible(show);
+    this.progressBg.setVisible(show);
+  }
+
+  setSpinning(on: boolean, dt: number) {
+    this.spinning = on;
+    if (on) this.wheel.rotation += dt * 8;
+  }
+
+  setProgress(t: number) {
+    this.progress.width = 50 * Phaser.Math.Clamp(t, 0, 1);
+  }
+}
