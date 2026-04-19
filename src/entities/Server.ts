@@ -5,8 +5,7 @@ export type ServerState = "safe" | "warning" | "critical" | "failed";
 export class Server extends Phaser.GameObjects.Container {
   public heat = 0;
   public state: ServerState = "safe";
-  private box: Phaser.GameObjects.Rectangle;
-  private screen: Phaser.GameObjects.Rectangle;
+  private sprite: Phaser.GameObjects.Image;
   private heatBar: Phaser.GameObjects.Rectangle;
   private heatBarBg: Phaser.GameObjects.Rectangle;
   private label: Phaser.GameObjects.Text;
@@ -23,8 +22,7 @@ export class Server extends Phaser.GameObjects.Container {
     super(scene, x, y);
     scene.add.existing(this);
 
-    this.box = scene.add.rectangle(0, 0, 48, 72, 0x1f2a38).setStrokeStyle(2, 0x3a4a60);
-    this.screen = scene.add.rectangle(0, -16, 36, 14, 0x2ee66b);
+    this.sprite = scene.add.image(0, 0, "server_green").setDisplaySize(52, 76);
     this.heatBarBg = scene.add.rectangle(0, 22, 38, 6, 0x0a0f15).setStrokeStyle(1, 0x3a4a60);
     this.heatBar = scene.add.rectangle(-19, 22, 0, 4, 0x2ee66b).setOrigin(0, 0.5);
     this.label = scene.add
@@ -35,7 +33,7 @@ export class Server extends Phaser.GameObjects.Container {
       .setOrigin(0.5)
       .setVisible(false);
 
-    this.add([this.box, this.screen, this.heatBarBg, this.heatBar, this.label, this.flushPrompt]);
+    this.add([this.sprite, this.heatBarBg, this.heatBar, this.label, this.flushPrompt]);
     this.setSize(48, 72);
   }
 
@@ -50,9 +48,9 @@ export class Server extends Phaser.GameObjects.Container {
     this.heat = Phaser.Math.Clamp(this.heat - amount, 0, 100);
     this.refresh();
     this.scene.tweens.add({
-      targets: this.screen,
-      scaleX: 1.3,
-      scaleY: 1.3,
+      targets: this.sprite,
+      scaleX: this.sprite.scaleX * 1.1,
+      scaleY: this.sprite.scaleY * 1.1,
       yoyo: true,
       duration: 100,
     });
@@ -83,7 +81,7 @@ export class Server extends Phaser.GameObjects.Container {
   setSurgeState(state: "off" | "telegraph" | "active", multiplier = 1) {
     this.heatMultiplier = multiplier;
     if (state === "off") {
-      this.box.setStrokeStyle(2, 0x3a4a60);
+      this.sprite.clearTint();
       if (this.surgeIcon) {
         this.scene.tweens.killTweensOf(this.surgeIcon);
         this.surgeIcon.destroy();
@@ -99,7 +97,7 @@ export class Server extends Phaser.GameObjects.Container {
     }
     this.scene.tweens.killTweensOf(this.surgeIcon);
     if (state === "telegraph") {
-      this.box.setStrokeStyle(3, 0xffcc22);
+      this.sprite.setTint(0xffcc22);
       this.surgeIcon.setText("AI INCOMING");
       this.surgeIcon.setColor("#ffcc22");
       this.scene.tweens.add({
@@ -110,7 +108,7 @@ export class Server extends Phaser.GameObjects.Container {
         repeat: -1,
       });
     } else {
-      this.box.setStrokeStyle(3, 0xffaa22);
+      this.sprite.setTint(0xffaa22);
       this.surgeIcon.setText("AI LIVE x2.5");
       this.surgeIcon.setColor("#ffaa22");
       this.surgeIcon.setAlpha(1);
@@ -121,8 +119,8 @@ export class Server extends Phaser.GameObjects.Container {
     if (this.failed) return;
     this.failed = true;
     this.state = "failed";
-    this.screen.setFillStyle(0x333333);
-    this.box.setFillStyle(0x3a1010);
+    this.sprite.setTexture("server_crashed");
+    this.sprite.clearTint();
     const flash = this.scene.add.circle(this.x, this.y, 10, 0xff7a3a, 0.8);
     this.scene.tweens.add({
       targets: flash,
@@ -196,7 +194,6 @@ export class Server extends Phaser.GameObjects.Container {
       newState = "warning";
     }
     this.heatBar.setFillStyle(color);
-    this.screen.setFillStyle(color);
     this.state = newState;
   }
 }

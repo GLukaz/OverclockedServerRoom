@@ -1,4 +1,7 @@
 import * as Phaser from "phaser";
+import { PreloadScene } from "./scenes/PreloadScene";
+import { LoadingScene } from "./scenes/LoadingScene";
+import { MenuScene } from "./scenes/MenuScene";
 import { GameScene } from "./scenes/GameScene";
 import { GAME_HEIGHT, GAME_WIDTH } from "./config/dimensions";
 
@@ -18,7 +21,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [GameScene],
+  scene: [PreloadScene, LoadingScene, MenuScene, GameScene],
 };
 
 new Phaser.Game(config);

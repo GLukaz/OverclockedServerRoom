@@ -12,7 +12,7 @@ const clampX = (v: number) => Phaser.Math.Clamp(v, 0, GAME_WIDTH);
 const clampY = (v: number) => Phaser.Math.Clamp(v, 0, GAME_HEIGHT);
 
 type Ref =
-  | { kind: "platform"; spec: PlatformSpec; visual: Phaser.GameObjects.Rectangle }
+  | { kind: "platform"; spec: PlatformSpec; visual: Phaser.GameObjects.NineSlice }
   | { kind: "server"; spec: ServerSpec; visual: Server }
   | { kind: "hazard"; spec: HazardSpec; visual: ElectricHazard | SteamPipe }
   | { kind: "drain"; spec: { x: number; y: number }; visual: DrainValve };
@@ -27,7 +27,7 @@ interface Handle {
 export interface EditorDeps {
   level: LevelConfig;
   levelIndex: number;
-  platformVisuals: Phaser.GameObjects.Rectangle[];
+  platformVisuals: Phaser.GameObjects.NineSlice[];
   servers: Server[];
   hazards: (ElectricHazard | SteamPipe)[];
   drainSpec: { x: number; y: number };
@@ -245,10 +245,17 @@ export class LevelEditor {
 
   private syncRef(ref: Ref) {
     if (ref.kind === "platform") {
-      const rect = ref.visual;
-      rect.setPosition(ref.spec.x, ref.spec.y);
-      rect.setSize(ref.spec.w, ref.spec.h);
-      const body = rect.body as Phaser.Physics.Arcade.StaticBody | undefined;
+      const slice = ref.visual;
+      slice.setPosition(ref.spec.x, ref.spec.y);
+      slice.setSlices(
+        ref.spec.w,
+        ref.spec.h,
+        slice.leftWidth,
+        slice.rightWidth,
+        slice.topHeight,
+        slice.bottomHeight
+      );
+      const body = (slice as unknown as { body?: Phaser.Physics.Arcade.StaticBody }).body;
       if (body) {
         body.setSize(ref.spec.w, ref.spec.h);
         body.updateFromGameObject();

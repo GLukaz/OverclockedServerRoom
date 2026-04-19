@@ -39,7 +39,7 @@ const BURST_TIMEOUT_MS = 8000;
 export class GameScene extends Phaser.Scene {
   private player!: Player;
   private platforms!: Phaser.Physics.Arcade.StaticGroup;
-  private platformVisuals: Phaser.GameObjects.Rectangle[] = [];
+  private platformVisuals: Phaser.GameObjects.NineSlice[] = [];
   private servers: Server[] = [];
   private hazards: (ElectricHazard | SteamPipe)[] = [];
   private drain!: DrainValve;
@@ -103,11 +103,15 @@ export class GameScene extends Phaser.Scene {
     this.bursting = false;
     this.drainHoldMs = 0;
 
-    this.drawBackdrop();
-
+    // this.drawBackdrop();
+    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, "bg-servers-2");
+    // const scale = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
+    // bg.setScale(scale);
+    bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+    
     this.platforms = this.physics.add.staticGroup();
     for (const p of this.level.platforms) {
-      this.platformVisuals.push(this.makePlatform(p.x, p.y, p.w, p.h, 0x2a3546));
+      this.platformVisuals.push(this.makePlatform(p.x, p.y, p.w, p.h));
     }
 
     this.level.servers.forEach((s, i) =>
@@ -213,11 +217,12 @@ export class GameScene extends Phaser.Scene {
     for (let y = 0; y < GAME_HEIGHT; y += 32) g.lineBetween(0, y, GAME_WIDTH, y);
   }
 
-  private makePlatform(x: number, y: number, w: number, h: number, color: number) {
-    const rect = this.add.rectangle(x, y, w, h, color).setStrokeStyle(2, 0x4a5c75);
-    this.physics.add.existing(rect, true);
-    this.platforms.add(rect);
-    return rect;
+  private makePlatform(x: number, y: number, w: number, h: number) {
+    const slice = this.add.nineslice(x, y, "platform", undefined, w, h, w/180, w/180, h/18, h/18  );
+    if (w >= GAME_WIDTH) slice.setVisible(false);
+    this.physics.add.existing(slice, true);
+    this.platforms.add(slice);
+    return slice;
   }
 
   private inBuffBand() {
