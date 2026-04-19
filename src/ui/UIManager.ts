@@ -3,6 +3,7 @@ import * as Phaser from "phaser";
 export class UIManager {
   private overclockBar: Phaser.GameObjects.Rectangle;
   private waterBar: Phaser.GameObjects.Rectangle;
+  private waterBarFrame: Phaser.GameObjects.Rectangle;
   private overclockLabel: Phaser.GameObjects.Text;
   private waterLabel: Phaser.GameObjects.Text;
   private statusText: Phaser.GameObjects.Text;
@@ -10,7 +11,10 @@ export class UIManager {
   private buffLabel!: Phaser.GameObjects.Text;
   private eventLog!: Phaser.GameObjects.Text;
   private levelLabel!: Phaser.GameObjects.Text;
+  private staminaBar!: Phaser.GameObjects.Rectangle;
+  private staminaLabel!: Phaser.GameObjects.Text;
   private readonly barWidth = 200;
+  private readonly waterBlinkThreshold = 85;
 
   constructor(private scene: Phaser.Scene) {
     const pad = 12;
@@ -38,7 +42,7 @@ export class UIManager {
       fontSize: "12px",
       color: "#4ab0ff",
     });
-    scene.add
+    this.waterBarFrame = scene.add
       .rectangle(pad, pad + 58, this.barWidth, 12, 0x000000)
       .setOrigin(0, 0)
       .setStrokeStyle(1, 0x3a4a60);
@@ -59,6 +63,24 @@ export class UIManager {
       fontFamily: "monospace",
       fontSize: "12px",
       color: "#4ab0ff",
+    });
+
+    scene.add.text(pad, pad + 92, "STAMINA", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#b7e88f",
+    });
+    scene.add
+      .rectangle(pad, pad + 110, this.barWidth, 10, 0x000000)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x3a4a60);
+    this.staminaBar = scene.add
+      .rectangle(pad, pad + 110, this.barWidth, 10, 0x7ad46a)
+      .setOrigin(0, 0);
+    this.staminaLabel = scene.add.text(pad + this.barWidth + 8, pad + 108, "100%", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#b7e88f",
     });
 
     this.statusText = scene.add
@@ -103,19 +125,44 @@ export class UIManager {
     water: number,
     serversAlive: number,
     serversTotal: number,
-    buffActive: boolean
+    buffActive: boolean,
+    staminaPct: number,
+    tired: boolean
   ) {
     this.overclockBar.width = this.barWidth * (overclock / 100);
     this.waterBar.width = this.barWidth * (water / 100);
     this.overclockLabel.setText(`${Math.floor(overclock)}%`);
     this.waterLabel.setText(`${Math.floor(water)}%`);
     this.statusText.setText(`SERVERS ${serversAlive}/${serversTotal}`);
+
+    if (water >= this.waterBlinkThreshold) {
+      const t = this.scene.time.now;
+      const blink = (Math.sin(t / 90) + 1) * 0.5;
+      const alpha = 0.55 + 0.45 * blink;
+      this.waterBar.setFillStyle(0xff3a3a);
+      this.waterBar.setAlpha(alpha);
+      this.waterBarFrame.setStrokeStyle(1, 0xff3a3a, alpha);
+      this.waterLabel.setColor("#ff4a4a");
+    } else {
+      this.waterBar.setFillStyle(0x4ab0ff);
+      this.waterBar.setAlpha(1);
+      this.waterBarFrame.setStrokeStyle(1, 0x3a4a60);
+      this.waterLabel.setColor("#4ab0ff");
+    }
+
+    this.staminaBar.width = this.barWidth * Phaser.Math.Clamp(staminaPct, 0, 1);
+    this.staminaLabel.setText(`${Math.floor(staminaPct * 100)}%`);
+    if (tired) {
+      this.staminaBar.setFillStyle(0xff884a);
+      this.staminaLabel.setColor("#ff884a");
+    } else {
+      this.staminaBar.setFillStyle(0x7ad46a);
+      this.staminaLabel.setColor("#b7e88f");
+    }
+
     if (buffActive) {
       this.buffLabel.setText("OPTIMAL PRESSURE +20%");
       this.buffLabel.setColor("#9fd0ff");
-    } else if (water > 70) {
-      this.buffLabel.setText("OVERPRESSURE! -25% SPEED");
-      this.buffLabel.setColor("#ff4a4a");
     } else if (water < 30 && water > 0) {
       this.buffLabel.setText("LOW PRESSURE");
       this.buffLabel.setColor("#6f85a3");
@@ -229,7 +276,30 @@ export class UIManager {
 
   setHint(text: string) {
     this.hint.setText(text);
+    this.hint.setColor("#6f85a3");
   }
+
+  flashHint(text: string, color: string, durationMs = 1500) {
+    this.hint.setText(text);
+    this.hint.setColor(color);
+    this.scene.tweens.killTweensOf(this.hint);
+    this.hint.setAlpha(1);
+    this.scene.tweens.add({
+      targets: this.hint,
+      alpha: 0.4,
+      duration: 180,
+      yoyo: true,
+      repeat: Math.floor(durationMs / 360),
+      onComplete: () => {
+        this.hint.setAlpha(1);
+        this.hint.setText(this.defaultHint);
+        this.hint.setColor("#6f85a3");
+      },
+    });
+  }
+
+  private readonly defaultHint =
+    "A/D move  -  W jump  -  E vent (+water)  -  hold Q water (-water)  -  F drain";
 
   setLevel(current: number, total: number, name: string) {
     this.levelLabel.setText(`LEVEL ${current}/${total}  ${name}`);

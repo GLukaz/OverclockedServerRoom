@@ -13,6 +13,30 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private readonly coyoteMs = 110;
   private readonly jumpBufferMs = 120;
   private wasUp = false;
+  private paralyzedMs = 0;
+
+  private stamina = 100;
+  private readonly maxStamina = 100;
+  private readonly staminaDrainPerSec = 11;
+  private readonly staminaRegenPerSec = 48;
+  private readonly tiredThreshold = 35;
+  private readonly minStaminaSpeed = 0.8;
+
+  get staminaPct(): number {
+    return this.stamina / this.maxStamina;
+  }
+  get isTired(): boolean {
+    return this.stamina < this.tiredThreshold;
+  }
+
+  isParalyzed(): boolean {
+    return this.paralyzedMs > 0;
+  }
+
+  paralyze(ms: number) {
+    this.paralyzedMs = Math.max(this.paralyzedMs, ms);
+    this.setTint(0xffe27a);
+  }
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     const tex = Player.ensureTexture(scene);
@@ -47,16 +71,46 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   update(delta = 16) {
     const body = this.body as Phaser.Physics.Arcade.Body;
+
+    if (this.paralyzedMs > 0) {
+      this.paralyzedMs -= delta;
+      body.setVelocityX(0);
+      this.setAlpha(0.4 + 0.4 * Math.sin(this.scene.time.now / 60));
+      this.wasUp = true;
+      this.jumpBufferTimer = 0;
+      if (this.paralyzedMs <= 0) {
+        this.paralyzedMs = 0;
+        this.setAlpha(1);
+        this.clearTint();
+      }
+      return;
+    }
+
     const left = this.cursors.left?.isDown || this.keyA.isDown;
     const right = this.cursors.right?.isDown || this.keyD.isDown;
     const up = !!(this.cursors.up?.isDown || this.keyW.isDown || this.cursors.space?.isDown);
 
-    const speed = this.moveSpeed * this.speedMultiplier;
+    const dt = delta / 1000;
+    const onGround = body.blocked.down || body.touching.down;
+    const moving = left || right;
+    const restingOnGround = onGround && Math.abs(body.velocity.y) < 1;
+
+    if (moving && onGround) {
+      this.stamina = Math.max(0, this.stamina - this.staminaDrainPerSec * dt);
+    } else if (!moving && restingOnGround) {
+      this.stamina = Math.min(this.maxStamina, this.stamina + this.staminaRegenPerSec * dt);
+    }
+
+    let stamFactor = 1;
+    if (this.stamina < this.tiredThreshold) {
+      const t = this.stamina / this.tiredThreshold;
+      stamFactor = this.minStaminaSpeed + (1 - this.minStaminaSpeed) * t;
+    }
+
+    const speed = this.moveSpeed * this.speedMultiplier * stamFactor;
     if (left) body.setVelocityX(-speed);
     else if (right) body.setVelocityX(speed);
     else body.setVelocityX(0);
-
-    const onGround = body.blocked.down || body.touching.down;
     this.coyoteTimer = onGround ? this.coyoteMs : Math.max(0, this.coyoteTimer - delta);
 
     const justPressedUp = up && !this.wasUp;

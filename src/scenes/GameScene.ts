@@ -2,17 +2,23 @@ import * as Phaser from "phaser";
 import { Player } from "../entities/Player";
 import { Server } from "../entities/Server";
 import { DrainValve } from "../entities/DrainValve";
+import { ElectricHazard } from "../entities/ElectricHazard";
+import { SteamPipe } from "../entities/SteamPipe";
 import { UIManager } from "../ui/UIManager";
 import { EventManager } from "../events/EventManager";
+import { LevelEditor } from "../editor/LevelEditor";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import {
   DEBUG,
+  DEFAULT_DRAIN,
   LEVELS,
   LevelConfig,
   getFurthestLevelIndex,
   markLevelReached,
   resetFurthestLevelIndex,
 } from "../config/levels";
+
+const PARALYZE_MS = 1200;
 
 const WATER_HOLD_MS = 400;
 const VENT_COOLDOWN_MS = 700;
@@ -33,10 +39,14 @@ const BURST_TIMEOUT_MS = 8000;
 export class GameScene extends Phaser.Scene {
   private player!: Player;
   private platforms!: Phaser.Physics.Arcade.StaticGroup;
+  private platformVisuals: Phaser.GameObjects.Rectangle[] = [];
   private servers: Server[] = [];
+  private hazards: (ElectricHazard | SteamPipe)[] = [];
   private drain!: DrainValve;
+  private drainSpec!: { x: number; y: number };
   private ui!: UIManager;
   private eventManager!: EventManager;
+  private editor!: LevelEditor;
 
   private levelIndex = 0;
   private level!: LevelConfig;
@@ -49,6 +59,7 @@ export class GameScene extends Phaser.Scene {
   private waterKey!: Phaser.Input.Keyboard.Key;
   private drainKey!: Phaser.Input.Keyboard.Key;
   private restartKey!: Phaser.Input.Keyboard.Key;
+  private editorKey!: Phaser.Input.Keyboard.Key;
 
   private holdMs = 0;
   private flushFired = false;
@@ -83,6 +94,8 @@ export class GameScene extends Phaser.Scene {
     this.gameOver = false;
     this.transitioning = false;
     this.servers = [];
+    this.hazards = [];
+    this.platformVisuals = [];
     this.holdMs = 0;
     this.flushFired = false;
     this.ventGlobalCooldown = 0;
@@ -94,14 +107,50 @@ export class GameScene extends Phaser.Scene {
 
     this.platforms = this.physics.add.staticGroup();
     for (const p of this.level.platforms) {
-      this.makePlatform(p.x, p.y, p.w, p.h, 0x2a3546);
+      this.platformVisuals.push(this.makePlatform(p.x, p.y, p.w, p.h, 0x2a3546));
     }
 
     this.level.servers.forEach((s, i) =>
       this.servers.push(new Server(this, s.x, s.y, i + 1))
     );
 
-    this.drain = new DrainValve(this, 90, GAME_HEIGHT - 44);
+    if (this.level.hazards) {
+      for (const h of this.level.hazards) {
+        if (h.type === "electric") {
+          this.hazards.push(
+            new ElectricHazard(this, {
+              x: h.x,
+              y: h.y,
+              w: h.w,
+              h: h.h,
+              offMs: h.offMs,
+              warnMs: h.warnMs,
+              activeMs: h.activeMs,
+              phaseOffsetMs: h.phaseOffsetMs,
+            })
+          );
+        } else {
+          this.hazards.push(
+            new SteamPipe(this, {
+              x: h.x,
+              y: h.y,
+              direction: h.direction,
+              length: h.length,
+              width: h.width,
+              offMs: h.offMs,
+              warnMs: h.warnMs,
+              activeMs: h.activeMs,
+              phaseOffsetMs: h.phaseOffsetMs,
+            })
+          );
+        }
+      }
+    }
+
+    this.drainSpec = this.level.drain
+      ? { x: this.level.drain.x, y: this.level.drain.y }
+      : { ...DEFAULT_DRAIN };
+    this.drain = new DrainValve(this, this.drainSpec.x, this.drainSpec.y);
 
     this.player = new Player(this, 140, GAME_HEIGHT - 120);
     this.physics.add.collider(this.player, this.platforms);
@@ -139,6 +188,17 @@ export class GameScene extends Phaser.Scene {
     this.waterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.drainKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.restartKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.editorKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F2);
+
+    this.editor = new LevelEditor(this, {
+      level: this.level,
+      levelIndex: this.levelIndex,
+      platformVisuals: this.platformVisuals,
+      servers: this.servers,
+      hazards: this.hazards,
+      drainSpec: this.drainSpec,
+      drainVisual: this.drain,
+    });
 
     this.ui.setLevel(this.levelIndex + 1, LEVELS.length, this.level.name);
     this.ui.showBanner(`LEVEL ${this.levelIndex + 1} — ${this.level.name}`, "#ff9a4a");
@@ -157,6 +217,7 @@ export class GameScene extends Phaser.Scene {
     const rect = this.add.rectangle(x, y, w, h, color).setStrokeStyle(2, 0x4a5c75);
     this.physics.add.existing(rect, true);
     this.platforms.add(rect);
+    return rect;
   }
 
   private inBuffBand() {
@@ -164,6 +225,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
+    if (Phaser.Input.Keyboard.JustDown(this.editorKey)) {
+      this.editor.toggle();
+      if (this.editor.isActive()) this.physics.pause();
+      else this.physics.resume();
+    }
+    if (this.editor.isActive()) {
+      this.editor.update(delta);
+      return;
+    }
+
     if (this.gameOver) {
       if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
         const target = DEBUG.restartFromLastLevel
@@ -198,7 +269,19 @@ export class GameScene extends Phaser.Scene {
     }
     const overclockFactor = 1 + this.overclock / 50;
 
-    this.player.speedMultiplier = this.waterLevel > BUFF_HIGH ? 0.75 : 1;
+    const pBody = this.player.body as Phaser.Physics.Arcade.Body;
+    for (const hz of this.hazards) {
+      hz.update(delta);
+      if (hz.isDangerous() && !this.player.isParalyzed()) {
+        if (hz.overlapsBox(this.player.x, this.player.y, pBody.width, pBody.height)) {
+          this.player.paralyze(PARALYZE_MS);
+          this.flashBurst(this.player.x, this.player.y, 0xffe27a);
+          this.ui.setHint("ZAPPED! cool down...");
+          pBody.setVelocityY(-260);
+        }
+      }
+    }
+
     this.player.update(delta);
 
     let aliveCount = 0;
@@ -233,7 +316,11 @@ export class GameScene extends Phaser.Scene {
     if (nearest && nearest.canVent()) nearest.showFlushPrompt(true);
 
     // Vent: tap E — AoE cool servers + earn water per server vented
-    if (Phaser.Input.Keyboard.JustDown(this.interactKey) && this.ventGlobalCooldown <= 0) {
+    if (
+      Phaser.Input.Keyboard.JustDown(this.interactKey) &&
+      this.ventGlobalCooldown <= 0 &&
+      !this.player.isParalyzed()
+    ) {
       this.showAoeRadius(this.player.x, this.player.y);
       this.ventGlobalCooldown = VENT_COOLDOWN_MS;
       const buffed = this.inBuffBand();
@@ -262,7 +349,17 @@ export class GameScene extends Phaser.Scene {
 
     // Water: hold Q near a server — spend water to cool it (blocked during overpressure)
     const qDown = this.waterKey.isDown;
-    if (qDown && nearest && !this.bursting) {
+    const qJustDown = Phaser.Input.Keyboard.JustDown(this.waterKey);
+    if (qJustDown && nearest) {
+      if (this.bursting) {
+        this.ui.flashHint("TOO MUCH PRESSURE! Drain the valve (F) first", "#ff4a4a");
+        this.flashBurst(nearest.x, nearest.y, 0xff4a4a);
+      } else if (this.waterLevel < WATER_COST) {
+        this.ui.flashHint("NOT ENOUGH PRESSURE! Vent servers (E) to build it up", "#ff884a");
+        this.flashBurst(nearest.x, nearest.y, 0xff884a);
+      }
+    }
+    if (qDown && nearest && !this.bursting && !this.player.isParalyzed()) {
       this.holdMs += delta;
       if (!this.flushFired && this.holdMs >= WATER_HOLD_MS) {
         if (this.waterLevel >= WATER_COST && nearest.canVent()) {
@@ -272,8 +369,8 @@ export class GameScene extends Phaser.Scene {
           this.waterLevel = Phaser.Math.Clamp(this.waterLevel - WATER_COST, 0, 100);
           this.flashBurst(nearest.x, nearest.y, 0x4ab0ff);
           this.flushFired = true;
-        } else {
-          this.ui.setHint("Not enough water - vent servers to earn more!");
+        } else if (this.waterLevel < WATER_COST) {
+          this.ui.flashHint("NOT ENOUGH PRESSURE! Vent servers (E) to build it up", "#ff884a");
         }
       }
     }
@@ -286,7 +383,8 @@ export class GameScene extends Phaser.Scene {
       Phaser.Math.Distance.Between(this.player.x, this.player.y, this.drain.x, this.drain.y) < 90;
     this.drain.showPrompt(nearDrain && this.bursting);
     this.drain.showWarning(this.bursting);
-    const holdingDrain = nearDrain && this.drainKey.isDown && this.bursting;
+    const holdingDrain =
+      nearDrain && this.drainKey.isDown && this.bursting && !this.player.isParalyzed();
     this.drain.setSpinning(holdingDrain, dt);
     if (holdingDrain) {
       this.drainHoldMs += delta;
@@ -319,7 +417,9 @@ export class GameScene extends Phaser.Scene {
       this.waterLevel,
       aliveCount,
       this.servers.length,
-      this.inBuffBand()
+      this.inBuffBand(),
+      this.player.staminaPct,
+      this.player.isTired
     );
 
     if (aliveCount === 0) {
