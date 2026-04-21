@@ -25,28 +25,28 @@ export interface EventConfig {
 
 export type HazardSpec =
   | {
-      type: "electric";
-      x: number;
-      y: number;
-      w: number;
-      h: number;
-      offMs?: number;
-      warnMs?: number;
-      activeMs?: number;
-      phaseOffsetMs?: number;
-    }
+    type: "electric";
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    offMs?: number;
+    warnMs?: number;
+    activeMs?: number;
+    phaseOffsetMs?: number;
+  }
   | {
-      type: "steam";
-      x: number;
-      y: number;
-      direction: "up" | "down" | "left" | "right";
-      length?: number;
-      width?: number;
-      offMs?: number;
-      warnMs?: number;
-      activeMs?: number;
-      phaseOffsetMs?: number;
-    };
+    type: "steam";
+    x: number;
+    y: number;
+    direction: "up" | "down" | "left" | "right";
+    length?: number;
+    width?: number;
+    offMs?: number;
+    warnMs?: number;
+    activeMs?: number;
+    phaseOffsetMs?: number;
+  };
 
 export interface LevelConfig {
   id: number;
@@ -65,7 +65,7 @@ export const DEFAULT_DRAIN = { x: 90, y: GAME_HEIGHT - 44 };
 
 export const DEBUG = {
   // 0-indexed level to start from. null = start at level 1.
-  startLevel: 3 as number | null,
+  startLevel: 0 as number | null,
   // On death (R), restart at the highest level reached instead of level 1.
   restartFromLastLevel: true,
 };
@@ -85,14 +85,16 @@ export const LEVELS: LevelConfig[] = [
   {
     id: 1,
     name: "BOOT SECTOR",
+    // Level 1 - BOOT SECTOR
     platforms: [
       { x: 480, y: 524, w: 960, h: 32 },
       { x: 480, y: 400, w: 200, h: 18 },
     ],
     servers: [
-      { x: 335, y: 470 },
-      { x: 525, y: 355 },
+      { x: 715, y: 455 },
+      { x: 485, y: 335 },
     ],
+    drain: { x: 135, y: 495 },
     overclockPerSecond: 3.0,
     serverHeatBase: 1.0,
     serverHeatFactor: 0.8,
@@ -109,6 +111,7 @@ export const LEVELS: LevelConfig[] = [
   {
     id: 2,
     name: "CACHE LAYER",
+    // Level 2 - CACHE LAYER
     platforms: [
       { x: 480, y: 524, w: 960, h: 32 },
       { x: 200, y: 420, w: 180, h: 18 },
@@ -116,10 +119,11 @@ export const LEVELS: LevelConfig[] = [
       { x: 480, y: 300, w: 180, h: 18 },
     ],
     servers: [
-      { x: 400, y: 470 },
-      { x: 760, y: 375 },
-      { x: 480, y: 255 },
+      { x: 400, y: 455 },
+      { x: 760, y: 355 },
+      { x: 480, y: 235 },
     ],
+    drain: { x: 135, y: 495 },
     overclockPerSecond: 2.2,
     serverHeatBase: 1.5,
     serverHeatFactor: 1.2,
@@ -136,20 +140,22 @@ export const LEVELS: LevelConfig[] = [
   {
     id: 3,
     name: "HOT AISLE",
+    // Level 3 - HOT AISLE
     platforms: [
-      GROUND,
+      { x: 480, y: 524, w: 960, h: 32 },
       { x: 180, y: 440, w: 160, h: 18 },
-      { x: GAME_WIDTH - 180, y: 440, w: 160, h: 18 },
+      { x: 780, y: 440, w: 160, h: 18 },
       { x: 350, y: 320, w: 160, h: 18 },
-      { x: GAME_WIDTH - 350, y: 320, w: 160, h: 18 },
-      { x: GAME_WIDTH / 2, y: 210, w: 160, h: 18 },
+      { x: 610, y: 320, w: 160, h: 18 },
+      { x: 480, y: 210, w: 160, h: 18 },
     ],
     servers: [
-      { x: 300, y: GAME_HEIGHT - 68 },
-      { x: GAME_WIDTH - 300, y: GAME_HEIGHT - 68 },
-      { x: 350, y: 320 - 45 },
-      { x: GAME_WIDTH - 350, y: 320 - 45 },
+      { x: 350, y: 455 },
+      { x: 625, y: 455 },
+      { x: 350, y: 255 },
+      { x: 610, y: 255 },
     ],
+    drain: { x: 135, y: 495 },
     overclockPerSecond: 1.6,
     serverHeatBase: 2.0,
     serverHeatFactor: 1.4,
@@ -175,12 +181,13 @@ export const LEVELS: LevelConfig[] = [
       { x: 770, y: 210, w: 160, h: 18 },
     ],
     servers: [
-      { x: 350, y: 470 },
-      { x: 775, y: 385 },
-      { x: 380, y: 275 },
-      { x: 580, y: 275 },
-      { x: 755, y: 165 },
+      { x: 355, y: 455 },
+      { x: 775, y: 365 },
+      { x: 380, y: 255 },
+      { x: 580, y: 255 },
+      { x: 755, y: 150 },
     ],
+    drain: { x: 135, y: 495 },
     hazards: [
       { type: "electric", x: 480, y: 498, w: 130, h: 22, offMs: 2600, warnMs: 700, activeMs: 1500 },
     ],
@@ -200,7 +207,7 @@ export const LEVELS: LevelConfig[] = [
   {
     id: 5,
     name: "MELTDOWN",
-   // Level 5 - MELTDOWN
+    // Level 5 - MELTDOWN
     platforms: [
       { x: 480, y: 524, w: 960, h: 32 },
       { x: 140, y: 440, w: 150, h: 18 },
@@ -211,13 +218,14 @@ export const LEVELS: LevelConfig[] = [
       { x: 865, y: 130, w: 160, h: 18 },
     ],
     servers: [
-      { x: 260, y: 175 },
-      { x: 695, y: 175 },
-      { x: 815, y: 395 },
-      { x: 475, y: 470 },
-      { x: 560, y: 285 },
-      { x: 865, y: 85 },
+      { x: 260, y: 155 },
+      { x: 695, y: 155 },
+      { x: 815, y: 375 },
+      { x: 475, y: 455 },
+      { x: 560, y: 265 },
+      { x: 865, y: 65 },
     ],
+    drain: { x: 135, y: 495 },
     hazards: [
       { type: "electric", x: 415, y: 310, w: 150, h: 22, offMs: 2200, warnMs: 600, activeMs: 1600 },
       { type: "steam", x: 760, y: 195, direction: "up", length: 150, width: 46, offMs: 2400, warnMs: 600, activeMs: 1700, phaseOffsetMs: 1500 },

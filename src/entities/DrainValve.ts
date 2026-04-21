@@ -1,8 +1,7 @@
 import * as Phaser from "phaser";
 
 export class DrainValve extends Phaser.GameObjects.Container {
-  private base: Phaser.GameObjects.Rectangle;
-  private wheel: Phaser.GameObjects.Arc;
+  private base: Phaser.GameObjects.Image;
   private prompt: Phaser.GameObjects.Text;
   private warning: Phaser.GameObjects.Text;
   private progress: Phaser.GameObjects.Rectangle;
@@ -13,8 +12,7 @@ export class DrainValve extends Phaser.GameObjects.Container {
     super(scene, x, y);
     scene.add.existing(this);
 
-    this.base = scene.add.rectangle(0, 12, 56, 24, 0x334a66).setStrokeStyle(2, 0x6690c0);
-    this.wheel = scene.add.circle(0, -4, 14, 0x4ab0ff).setStrokeStyle(2, 0x9fd0ff);
+    this.base = scene.add.image(0,-5, "valve").setScale(0.5);
     this.progressBg = scene.add.rectangle(0, -26, 50, 5, 0x0a0f15).setStrokeStyle(1, 0x3a4a60);
     this.progress = scene.add.rectangle(-25, -26, 0, 3, 0x4ab0ff).setOrigin(0, 0.5);
     this.prompt = scene.add
@@ -27,7 +25,7 @@ export class DrainValve extends Phaser.GameObjects.Container {
       .setOrigin(0.5)
       .setVisible(false);
 
-    this.add([this.base, this.wheel, this.progressBg, this.progress, this.prompt, this.warning]);
+    this.add([this.base, this.progressBg, this.progress, this.prompt, this.warning]);
   }
 
   showWarning(show: boolean) {
@@ -45,7 +43,6 @@ export class DrainValve extends Phaser.GameObjects.Container {
 
   setSpinning(on: boolean, dt: number) {
     this.spinning = on;
-    if (on) this.wheel.rotation += dt * 8;
   }
 
   setProgress(t: number) {

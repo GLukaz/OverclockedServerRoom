@@ -38,10 +38,6 @@ export class LoadingScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.load.on("progress", (value: number) => {
-      fill.width = barWidth * value;
-      percent.setText(Math.round(value * 100) + "%");
-    });
 
     this.load.image("bg-servers-2", "assets/bg-servers-2.png");
     this.load.image("title", "assets/title.png");
@@ -50,9 +46,44 @@ export class LoadingScene extends Phaser.Scene {
     this.load.image("server_yellow", "assets/server-yellow.png");
     this.load.image("server_red", "assets/server-red.png");
     this.load.image("server_crashed", "assets/server-crashed.png");
+    this.load.image("player_fix", "assets/player-fix.png");
+    this.load.image("player_walk_1", "assets/player_walk_1.png");
+    this.load.image("player_walk_2", "assets/player_walk_2.png");
+    this.load.image("player_jump", "assets/player_jump.png");
+    this.load.image("valve", "assets/valve.png");
+
+    this.load.on("progress", (value: number) => {
+      fill.width = barWidth * value;
+      percent.setText(Math.round(value * 100) + "%");
+    });
+
+
   }
 
   create() {
+    this.anims.create({
+      key: "walk",
+      frames: [
+        { key: "player_walk_1" },
+        { key: "player_walk_2" }
+      ],
+      frameRate: 8,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: "fix",
+      frames: [{ key: "player_fix" }],
+      frameRate: 1,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: "jump",
+      frames: [{ key: "player_jump" }],
+      frameRate: 1,
+      repeat: -1
+    });
     this.scene.start("MenuScene");
   }
 }

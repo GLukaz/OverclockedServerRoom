@@ -44,9 +44,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
+    this.setScale(0.65);
+
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(true);
-    body.setSize(28, 44);
+    body.setSize(56,88); // 56*0.66=36.96, 88*0.66=58.08 → same collision as before
 
     const kb = scene.input.keyboard!;
     this.cursors = kb.createCursorKeys();
@@ -55,8 +57,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.keyW = kb.addKey(Phaser.Input.Keyboard.KeyCodes.W);
   }
 
+
   private static ensureTexture(scene: Phaser.Scene): string {
-    const key = "player-rect";
+    const key = "player_walk_1";
     if (scene.textures.exists(key)) return key;
     const g = scene.add.graphics({ x: 0, y: 0 });
     g.fillStyle(0x66e0ff, 1);
@@ -98,6 +101,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (moving && onGround) {
       this.stamina = Math.max(0, this.stamina - this.staminaDrainPerSec * dt);
     } else if (!moving && restingOnGround) {
+      if (onGround)
+        this.anims.play("fix", true);
       this.stamina = Math.min(this.maxStamina, this.stamina + this.staminaRegenPerSec * dt);
     }
 
@@ -108,9 +113,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     const speed = this.moveSpeed * this.speedMultiplier * stamFactor;
-    if (left) body.setVelocityX(-speed);
-    else if (right) body.setVelocityX(speed);
-    else body.setVelocityX(0);
+    if (left) {
+      this.flipX = true;
+      body.setVelocityX(-speed);
+      if (onGround)
+        this.anims.play("walk", true);
+    }
+    else if (right) {
+      this.flipX = false;
+      body.setVelocityX(speed);
+      if (onGround)
+        this.anims.play("walk", true);
+    }
+    else {
+      body.setVelocityX(0);
+    }
     this.coyoteTimer = onGround ? this.coyoteMs : Math.max(0, this.coyoteTimer - delta);
 
     const justPressedUp = up && !this.wasUp;
@@ -125,6 +142,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     if (!up && body.velocity.y < -180) {
       body.setVelocityY(body.velocity.y * 0.5);
+      this.anims.play("jump", true);
+    }
+
+    if (up && !onGround) {
+      this.anims.play("jump", true);
     }
 
     this.wasUp = up;

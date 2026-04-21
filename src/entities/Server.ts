@@ -22,7 +22,7 @@ export class Server extends Phaser.GameObjects.Container {
     super(scene, x, y);
     scene.add.existing(this);
 
-    this.sprite = scene.add.image(0, 0, "server_green").setDisplaySize(52, 76);
+    this.sprite = scene.add.image(0, 0, "server_green").setDisplaySize(52*1.5, 76*1.5);
     this.heatBarBg = scene.add.rectangle(0, 22, 38, 6, 0x0a0f15).setStrokeStyle(1, 0x3a4a60);
     this.heatBar = scene.add.rectangle(-19, 22, 0, 4, 0x2ee66b).setOrigin(0, 0.5);
     this.label = scene.add
@@ -34,7 +34,7 @@ export class Server extends Phaser.GameObjects.Container {
       .setVisible(false);
 
     this.add([this.sprite, this.heatBarBg, this.heatBar, this.label, this.flushPrompt]);
-    this.setSize(48, 72);
+    this.setSize(52*1.5, 76*1.5);
   }
 
   addHeat(amount: number) {

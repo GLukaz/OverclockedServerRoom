@@ -108,7 +108,7 @@ export class GameScene extends Phaser.Scene {
     // const scale = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
     // bg.setScale(scale);
     bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
-    
+
     this.platforms = this.physics.add.staticGroup();
     for (const p of this.level.platforms) {
       this.platformVisuals.push(this.makePlatform(p.x, p.y, p.w, p.h));
@@ -156,7 +156,7 @@ export class GameScene extends Phaser.Scene {
       : { ...DEFAULT_DRAIN };
     this.drain = new DrainValve(this, this.drainSpec.x, this.drainSpec.y);
 
-    this.player = new Player(this, 140, GAME_HEIGHT - 120);
+    this.player = new Player(this, 260, GAME_HEIGHT - 120);
     this.physics.add.collider(this.player, this.platforms);
 
     this.ventLabel = this.add
@@ -218,7 +218,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private makePlatform(x: number, y: number, w: number, h: number) {
-    const slice = this.add.nineslice(x, y, "platform", undefined, w, h, w/180, w/180, h/18, h/18  );
+    const slice = this.add.nineslice(x, y, "platform", undefined, w, h, w / 180, w / 180, h / 18, h / 18);
     if (w >= GAME_WIDTH) slice.setVisible(false);
     this.physics.add.existing(slice, true);
     this.platforms.add(slice);
@@ -241,6 +241,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.gameOver) {
+      this.player.setVelocity(0, 0);
+      this.player.play("fix");
       if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
         const target = DEBUG.restartFromLastLevel
           ? getFurthestLevelIndex()
@@ -250,7 +252,11 @@ export class GameScene extends Phaser.Scene {
       }
       return;
     }
-    if (this.transitioning) return;
+    if (this.transitioning) {
+      this.player.setVelocity(0, 0);
+      this.player.play("fix");
+      return
+    };
 
     const dt = delta / 1000;
 
@@ -304,8 +310,8 @@ export class GameScene extends Phaser.Scene {
       aliveCount++;
       s.addHeat(
         dt *
-          (this.level.serverHeatBase + overclockFactor * this.level.serverHeatFactor) *
-          s.heatMultiplier
+        (this.level.serverHeatBase + overclockFactor * this.level.serverHeatFactor) *
+        s.heatMultiplier
       );
       if (s.heat >= 100) {
         s.fail();
