@@ -65,7 +65,7 @@ export const DEFAULT_DRAIN = { x: 90, y: GAME_HEIGHT - 44 };
 
 export const DEBUG = {
   // 0-indexed level to start from. null = start at level 1.
-  startLevel: 1 as number | null,
+  startLevel: null as number | null,
   // On death (R), restart at the highest level reached instead of level 1.
   restartFromLastLevel: true,
 };

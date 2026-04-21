@@ -6,6 +6,7 @@ import { ElectricHazard } from "../entities/ElectricHazard";
 import { SteamPipe } from "../entities/SteamPipe";
 import { UIManager } from "../ui/UIManager";
 import { QuipSystem } from "../ui/QuipSystem";
+import { TutorialController } from "../ui/TutorialController";
 import { EventManager } from "../events/EventManager";
 import { LevelEditor } from "../editor/LevelEditor";
 import { AudioManager } from "../audio/AudioManager";
@@ -48,6 +49,7 @@ export class GameScene extends Phaser.Scene {
   private drainSpec!: { x: number; y: number };
   private ui!: UIManager;
   private quips!: QuipSystem;
+  private tutorial: TutorialController | null = null;
   private eventManager!: EventManager;
   private editor!: LevelEditor;
   private audio = AudioManager.instance;
@@ -186,6 +188,9 @@ export class GameScene extends Phaser.Scene {
 
     this.ui = new UIManager(this);
     this.quips = new QuipSystem(this, this.player);
+    this.tutorial = TutorialController.isAllComplete()
+      ? null
+      : new TutorialController(this);
     this.time.delayedCall(2400, () => this.quips.trigger("onLevelStart"));
 
     this.eventManager = new EventManager(
@@ -402,6 +407,7 @@ export class GameScene extends Phaser.Scene {
         this.waterLevel = Phaser.Math.Clamp(this.waterLevel + VENT_WATER_GAIN * ventedCount, 0, 100);
         this.quips.trigger("onVent");
         this.audio.playSfx("sfx_vent");
+        this.tutorial?.notifyVent();
       }
     }
 
@@ -427,6 +433,7 @@ export class GameScene extends Phaser.Scene {
           this.waterLevel = Phaser.Math.Clamp(this.waterLevel - WATER_COST, 0, 100);
           this.flashBurst(nearest.x, nearest.y, 0x4ab0ff);
           this.audio.playSfx("sfx_flush");
+          this.tutorial?.notifyFlush();
           this.flushFired = true;
         } else if (this.waterLevel < WATER_COST) {
           this.ui.flashHint("NOT ENOUGH PRESSURE! Vent servers (E) to build it up", "#ff884a");
@@ -453,6 +460,7 @@ export class GameScene extends Phaser.Scene {
         this.flashBurst(this.drain.x, this.drain.y, 0x4ab0ff);
         this.quips.trigger("onDrain");
         this.audio.playSfx("sfx_drain");
+        this.tutorial?.notifyDrain();
       }
     } else if (this.drainHoldMs > 0) {
       this.drainHoldMs = Math.max(0, this.drainHoldMs - delta * 1.5);
@@ -486,6 +494,7 @@ export class GameScene extends Phaser.Scene {
     if (this.player.isTired && !this.wasTired) this.quips.trigger("onLowStamina");
     this.wasTired = this.player.isTired;
     this.quips.update(delta);
+    this.tutorial?.update({ pressure: this.waterLevel, bursting: this.bursting });
 
     if (aliveCount === 0) {
       this.gameOver = true;
