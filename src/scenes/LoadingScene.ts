@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH } from "../config/dimensions";
+import { MUSIC_ASSETS, SFX_ASSETS } from "../audio/sounds";
 
 export class LoadingScene extends Phaser.Scene {
   constructor() {
@@ -51,6 +52,19 @@ export class LoadingScene extends Phaser.Scene {
     this.load.image("player_walk_2", "assets/player_walk_2.png");
     this.load.image("player_jump", "assets/player_jump.png");
     this.load.image("valve", "assets/valve.png");
+
+    for (const sfx of SFX_ASSETS) {
+      this.load.audio(sfx.key, sfx.paths);
+    }
+    for (const music of MUSIC_ASSETS) {
+      this.load.audio(music.key, music.paths);
+    }
+
+    this.load.on("loaderror", (file: Phaser.Loader.File) => {
+      if (file.type === "audio") {
+        console.debug(`[audio] missing: ${file.key} (${file.src}) — skipping`);
+      }
+    });
 
     this.load.on("progress", (value: number) => {
       fill.width = barWidth * value;

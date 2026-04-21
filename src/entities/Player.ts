@@ -1,4 +1,5 @@
 import * as Phaser from "phaser";
+import { AudioManager } from "../audio/AudioManager";
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private moveSpeed = 240;
@@ -138,6 +139,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       body.setVelocityY(-this.jumpSpeed);
       this.jumpBufferTimer = 0;
       this.coyoteTimer = 0;
+      AudioManager.instance.playSfx("sfx_jump", 0.6);
     }
 
     if (!up && body.velocity.y < -180) {

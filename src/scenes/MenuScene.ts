@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH } from "../config/dimensions";
+import { AudioManager } from "../audio/AudioManager";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -8,6 +9,10 @@ export class MenuScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor("#010101");
+
+    const audio = AudioManager.instance;
+    audio.attach(this);
+    audio.playMusic("music_menu", 600);
 
     const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, "bg-servers-2");
     bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
@@ -37,15 +42,18 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    const startGame = () => {
+      audio.playSfx("sfx_click");
+      this.scene.start("GameScene");
+    };
+
     btn.on("pointerover", () => btn.setFillStyle(0x4ad98a));
     btn.on("pointerout", () => btn.setFillStyle(0x2ee66b));
-    btn.on("pointerdown", () => this.scene.start("GameScene"));
+    btn.on("pointerdown", startGame);
 
-    this.input.keyboard?.once("keydown-ENTER", () =>
-      this.scene.start("GameScene"),
-    );
-    this.input.keyboard?.once("keydown-SPACE", () =>
-      this.scene.start("GameScene"),
-    );
+    this.input.keyboard?.once("keydown-ENTER", startGame);
+    this.input.keyboard?.once("keydown-SPACE", startGame);
+
+    this.input.keyboard?.on("keydown-M", () => audio.toggleMute());
   }
 }

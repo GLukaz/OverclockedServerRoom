@@ -12,6 +12,12 @@ export type QuipEvent =
   | "onLowStamina"
   | "onIdle";
 
+// Per-event trigger probability (1 = always). Lower values yield the quip channel
+// to rarer events so chatty triggers like vent don't dominate the dialog.
+const QUIP_PROBABILITY: Partial<Record<QuipEvent, number>> = {
+  onVent: 0.15,
+};
+
 const QUIPS: Record<QuipEvent, string[]> = {
   onVent: [
     "Cool down, you overheated things.",
@@ -102,6 +108,8 @@ export class QuipSystem {
 
   trigger(event: QuipEvent) {
     if (this.cooldownMs > 0) return;
+    const prob = QUIP_PROBABILITY[event] ?? 1;
+    if (prob < 1 && Math.random() > prob) return;
     const bank = QUIPS[event];
     if (!bank || bank.length === 0) return;
     const last = this.lastByEvent.get(event);

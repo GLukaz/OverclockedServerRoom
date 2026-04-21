@@ -8,6 +8,7 @@ import { UIManager } from "../ui/UIManager";
 import { QuipSystem } from "../ui/QuipSystem";
 import { EventManager } from "../events/EventManager";
 import { LevelEditor } from "../editor/LevelEditor";
+import { AudioManager } from "../audio/AudioManager";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import {
   DEBUG,
@@ -49,6 +50,9 @@ export class GameScene extends Phaser.Scene {
   private quips!: QuipSystem;
   private eventManager!: EventManager;
   private editor!: LevelEditor;
+  private audio = AudioManager.instance;
+  private muteKey!: Phaser.Input.Keyboard.Key;
+  private muteIndicator!: Phaser.GameObjects.Text;
 
   private levelIndex = 0;
   private level!: LevelConfig;
@@ -201,6 +205,19 @@ export class GameScene extends Phaser.Scene {
     this.drainKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.restartKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.editorKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F2);
+    this.muteKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.M);
+
+    this.audio.attach(this);
+    this.audio.playMusic("music_game", 600);
+
+    this.muteIndicator = this.add
+      .text(GAME_WIDTH - 12, GAME_HEIGHT - 12, this.audio.isMuted() ? "MUTED [M]" : "", {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#ff884a",
+      })
+      .setOrigin(1, 1)
+      .setDepth(40);
 
     this.editor = new LevelEditor(this, {
       level: this.level,
@@ -238,6 +255,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
+    if (Phaser.Input.Keyboard.JustDown(this.muteKey)) {
+      const muted = this.audio.toggleMute();
+      this.muteIndicator.setText(muted ? "MUTED [M]" : "");
+    }
+
     if (Phaser.Input.Keyboard.JustDown(this.editorKey)) {
       this.editor.toggle();
       if (this.editor.isActive()) this.physics.pause();
@@ -277,12 +299,15 @@ export class GameScene extends Phaser.Scene {
       if (this.levelIndex + 1 < LEVELS.length) {
         this.transitioning = true;
         this.quips.trigger("onLevelClear");
+        this.audio.playSfx("sfx_level_clear");
         this.ui.showBanner(`LEVEL ${this.levelIndex + 1} CLEARED`, "#2ee66b");
         this.time.delayedCall(1400, () => {
           this.scene.restart({ levelIndex: this.levelIndex + 1 });
         });
       } else {
         this.gameOver = true;
+        this.audio.playSfx("sfx_level_clear");
+        this.audio.playMusic("music_win", 500, false);
         this.ui.showWin();
       }
       return;
@@ -305,6 +330,7 @@ export class GameScene extends Phaser.Scene {
           this.flashBurst(this.player.x, this.player.y, 0xffe27a);
           this.ui.setHint("ZAPPED! cool down...");
           this.quips.trigger("onZapped");
+          this.audio.playSfx("sfx_zap");
           pBody.setVelocityY(-260);
         }
       }
@@ -333,6 +359,7 @@ export class GameScene extends Phaser.Scene {
       if (s.heat >= 100) {
         s.fail();
         this.quips.trigger("onServerFail");
+        this.audio.playSfx("sfx_server_fail");
         continue;
       }
       const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
@@ -374,6 +401,7 @@ export class GameScene extends Phaser.Scene {
       if (ventedCount > 0) {
         this.waterLevel = Phaser.Math.Clamp(this.waterLevel + VENT_WATER_GAIN * ventedCount, 0, 100);
         this.quips.trigger("onVent");
+        this.audio.playSfx("sfx_vent");
       }
     }
 
@@ -398,6 +426,7 @@ export class GameScene extends Phaser.Scene {
           nearest.applyVentCooldown(SERVER_VENT_COOLDOWN_MS);
           this.waterLevel = Phaser.Math.Clamp(this.waterLevel - WATER_COST, 0, 100);
           this.flashBurst(nearest.x, nearest.y, 0x4ab0ff);
+          this.audio.playSfx("sfx_flush");
           this.flushFired = true;
         } else if (this.waterLevel < WATER_COST) {
           this.ui.flashHint("NOT ENOUGH PRESSURE! Vent servers (E) to build it up", "#ff884a");
@@ -423,6 +452,7 @@ export class GameScene extends Phaser.Scene {
         this.drainHoldMs = 0;
         this.flashBurst(this.drain.x, this.drain.y, 0x4ab0ff);
         this.quips.trigger("onDrain");
+        this.audio.playSfx("sfx_drain");
       }
     } else if (this.drainHoldMs > 0) {
       this.drainHoldMs = Math.max(0, this.drainHoldMs - delta * 1.5);
@@ -459,6 +489,8 @@ export class GameScene extends Phaser.Scene {
 
     if (aliveCount === 0) {
       this.gameOver = true;
+      this.audio.playSfx("sfx_game_over");
+      this.audio.playMusic("music_game_over", 600, false);
       this.ui.showGameOver("ALL SERVERS FAILED", "#ff4a4a");
       return;
     }
@@ -469,6 +501,8 @@ export class GameScene extends Phaser.Scene {
       this.burstLabel.setVisible(true);
       this.ui.showBanner("OVERPRESSURE! DRAIN NOW!", "#ff4a4a");
       this.quips.trigger("onOverpressure");
+      this.audio.playSfx("sfx_overpressure");
+      this.audio.playMusic("music_tension", 400);
     }
     if (this.bursting) {
       this.burstTimer -= delta;
@@ -479,9 +513,12 @@ export class GameScene extends Phaser.Scene {
       if (this.waterLevel < PRESSURE_BURST) {
         this.bursting = false;
         this.burstLabel.setVisible(false);
+        this.audio.playMusic("music_game", 600);
       } else if (this.burstTimer <= 0) {
         this.gameOver = true;
         this.burstLabel.setVisible(false);
+        this.audio.playSfx("sfx_game_over");
+        this.audio.playMusic("music_game_over", 600, false);
         this.ui.showGameOver("PIPES BURST", "#4ab0ff");
         return;
       }
