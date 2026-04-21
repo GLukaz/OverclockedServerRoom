@@ -205,7 +205,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.ui.setLevel(this.levelIndex + 1, LEVELS.length, this.level.name);
-    this.ui.showBanner(`LEVEL ${this.levelIndex + 1} — ${this.level.name}`, "#ff9a4a");
+    this.ui.showLevelIntro(this.levelIndex + 1, LEVELS.length, this.level.name, "#ff9a4a");
   }
 
   private drawBackdrop() {

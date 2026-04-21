@@ -8,7 +8,7 @@ export class UIManager {
   private waterLabel: Phaser.GameObjects.Text;
   private statusText: Phaser.GameObjects.Text;
   private hint: Phaser.GameObjects.Text;
-  private buffLabel!: Phaser.GameObjects.Text;
+  // private buffLabel!: Phaser.GameObjects.Text;
   private eventLog!: Phaser.GameObjects.Text;
   private levelLabel!: Phaser.GameObjects.Text;
   private staminaBar!: Phaser.GameObjects.Rectangle;
@@ -46,19 +46,19 @@ export class UIManager {
       .rectangle(pad, pad + 58, this.barWidth, 12, 0x000000)
       .setOrigin(0, 0)
       .setStrokeStyle(1, 0x3a4a60);
-    scene.add
-      .rectangle(pad + this.barWidth * 0.3, pad + 58, this.barWidth * 0.4, 12, 0x1a3a2a)
-      .setOrigin(0, 0);
+    // scene.add
+    //   .rectangle(pad + this.barWidth * 0.3, pad + 58, this.barWidth * 0.4, 12, 0x1a3a2a)
+    //   .setOrigin(0, 0);
     this.waterBar = scene.add
       .rectangle(pad, pad + 58, 0, 12, 0x4ab0ff)
       .setOrigin(0, 0);
-    this.buffLabel = scene.add
-      .text(pad + this.barWidth / 2, pad + 76, "", {
-        fontFamily: "monospace",
-        fontSize: "10px",
-        color: "#9fd0ff",
-      })
-      .setOrigin(0.5, 0);
+    // this.buffLabel = scene.add
+    //   .text(pad + this.barWidth / 2, pad + 76, "", {
+    //     fontFamily: "monospace",
+    //     fontSize: "10px",
+    //     color: "#9fd0ff",
+    //   })
+    //   .setOrigin(0.5, 0);
     this.waterLabel = scene.add.text(pad + this.barWidth + 8, pad + 58, "0%", {
       fontFamily: "monospace",
       fontSize: "12px",
@@ -115,7 +115,7 @@ export class UIManager {
       .text(scene.scale.width / 2, scene.scale.height - 18, "A/D move  -  W jump  -  E vent (+water)  -  hold Q water (-water)  -  F drain", {
         fontFamily: "monospace",
         fontSize: "12px",
-        color: "#6f85a3",
+        color: "#ffffff",
       })
       .setOrigin(0.5);
   }
@@ -160,15 +160,15 @@ export class UIManager {
       this.staminaLabel.setColor("#b7e88f");
     }
 
-    if (buffActive) {
-      this.buffLabel.setText("OPTIMAL PRESSURE +20%");
-      this.buffLabel.setColor("#9fd0ff");
-    } else if (water < 30 && water > 0) {
-      this.buffLabel.setText("LOW PRESSURE");
-      this.buffLabel.setColor("#6f85a3");
-    } else {
-      this.buffLabel.setText("");
-    }
+    // if (buffActive) {
+    //   this.buffLabel.setText("OPTIMAL PRESSURE +20%");
+    //   this.buffLabel.setColor("#9fd0ff");
+    // } else if (water < 30 && water > 0) {
+    //   this.buffLabel.setText("LOW PRESSURE");
+    //   this.buffLabel.setColor("#6f85a3");
+    // } else {
+    //   this.buffLabel.setText("");
+    // }
   }
 
   showBanner(msg: string, color: string) {
@@ -185,6 +185,62 @@ export class UIManager {
       y: t.y - 40,
       duration: 1800,
       onComplete: () => t.destroy(),
+    });
+  }
+
+  showLevelIntro(current: number, total: number, name: string, color: string) {
+    const cx = this.scene.scale.width / 2;
+    const cy = this.scene.scale.height / 2;
+
+    const title = this.scene.add
+      .text(cx, cy - 30, `LEVEL ${current}/${total}`, {
+        fontFamily: "monospace",
+        fontSize: "72px",
+        color,
+        stroke: "#000000",
+        strokeThickness: 8,
+      })
+      .setOrigin(0.5)
+      .setDepth(31)
+      .setAlpha(0)
+      .setScale(0.6);
+
+    const sub = this.scene.add
+      .text(cx, cy + 40, name.toUpperCase(), {
+        fontFamily: "monospace",
+        fontSize: "28px",
+        color: "#ffe27a",
+        stroke: "#000000",
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5)
+      .setDepth(31)
+      .setAlpha(0);
+
+    this.scene.tweens.add({
+      targets: title,
+      alpha: 1,
+      scale: 1,
+      duration: 350,
+      ease: "Back.Out",
+    });
+    this.scene.tweens.add({
+      targets: sub,
+      alpha: 1,
+      duration: 300,
+      delay: 250,
+    });
+
+    this.scene.tweens.add({
+      targets: [title, sub],
+      alpha: 0,
+      y: "-=60",
+      duration: 500,
+      delay: 2200,
+      onComplete: () => {
+        title.destroy();
+        sub.destroy();
+      },
     });
   }
 
@@ -276,7 +332,7 @@ export class UIManager {
 
   setHint(text: string) {
     this.hint.setText(text);
-    this.hint.setColor("#6f85a3");
+    this.hint.setColor("#ffffff");
   }
 
   flashHint(text: string, color: string, durationMs = 1500) {
@@ -293,7 +349,7 @@ export class UIManager {
       onComplete: () => {
         this.hint.setAlpha(1);
         this.hint.setText(this.defaultHint);
-        this.hint.setColor("#6f85a3");
+        this.hint.setColor("#ffffff");
       },
     });
   }

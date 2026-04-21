@@ -4,6 +4,7 @@ export class DrainValve extends Phaser.GameObjects.Container {
   private base: Phaser.GameObjects.Image;
   private prompt: Phaser.GameObjects.Text;
   private warning: Phaser.GameObjects.Text;
+  private arrow: Phaser.GameObjects.Text;
   private progress: Phaser.GameObjects.Rectangle;
   private progressBg: Phaser.GameObjects.Rectangle;
   public spinning = false;
@@ -25,14 +26,22 @@ export class DrainValve extends Phaser.GameObjects.Container {
       .setOrigin(0.5)
       .setVisible(false);
 
-    this.add([this.base, this.progressBg, this.progress, this.prompt, this.warning]);
+    this.arrow = scene.add
+      .text(0, -78, "▼", { fontFamily: "monospace", fontSize: "88px", color: "#ff6a4a" })
+      .setOrigin(0.5)
+      .setVisible(false);
+
+    this.add([this.base, this.progressBg, this.progress, this.prompt, this.warning, this.arrow]);
   }
 
   showWarning(show: boolean) {
     this.warning.setVisible(show);
+    this.arrow.setVisible(show);
     if (show) {
       const pulse = 0.6 + 0.4 * Math.sin(this.scene.time.now / 120);
       this.warning.setAlpha(pulse);
+      this.arrow.setAlpha(pulse);
+      this.arrow.y = -78 + Math.sin(this.scene.time.now / 180) * 4;
     }
   }
 

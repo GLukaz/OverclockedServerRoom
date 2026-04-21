@@ -26,7 +26,7 @@ export class Server extends Phaser.GameObjects.Container {
     this.heatBarBg = scene.add.rectangle(0, 22, 38, 6, 0x0a0f15).setStrokeStyle(1, 0x3a4a60);
     this.heatBar = scene.add.rectangle(-19, 22, 0, 4, 0x2ee66b).setOrigin(0, 0.5);
     this.label = scene.add
-      .text(0, -46, `S${id}`, { fontFamily: "monospace", fontSize: "12px", color: "#9fb4d0" })
+      .text(0, -66, `S${id}`, { fontFamily: "monospace", fontSize: "12px", color: "#9fb4d0" })
       .setOrigin(0.5);
     this.flushPrompt = scene.add
       .text(0, -84, "hold Q 💧", { fontFamily: "monospace", fontSize: "10px", color: "#4ab0ff" })
