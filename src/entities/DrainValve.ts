@@ -15,14 +15,14 @@ export class DrainValve extends Phaser.GameObjects.Container {
 
     this.base = scene.add.image(0,-5, "valve").setScale(0.5);
     this.progressBg = scene.add.rectangle(0, -26, 50, 5, 0x0a0f15).setStrokeStyle(1, 0x3a4a60);
-    this.progress = scene.add.rectangle(-25, -26, 0, 3, 0x4ab0ff).setOrigin(0, 0.5);
+    this.progress = scene.add.rectangle(-25, -126, 0, 3, 0x4ab0ff).setOrigin(0, 0.5);
     this.prompt = scene.add
-      .text(0, -42, "[F] drain", { fontFamily: "monospace", fontSize: "12px", color: "#9fd0ff" })
+      .text(0, -182, "[F] drain", { fontFamily: "monospace", fontSize: "12px", color: "#9fd0ff" })
       .setOrigin(0.5)
       .setVisible(false);
 
     this.warning = scene.add
-      .text(0, -58, "! DRAIN !", { fontFamily: "monospace", fontSize: "13px", color: "#ff6a4a" })
+      .text(0, -158, "! DRAIN !", { fontFamily: "monospace", fontSize: "13px", color: "#ff6a4a" })
       .setOrigin(0.5)
       .setVisible(false);
 

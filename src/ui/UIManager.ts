@@ -112,7 +112,7 @@ export class UIManager {
       .setAlpha(0);
 
     this.hint = scene.add
-      .text(scene.scale.width / 2, scene.scale.height - 18, "A/D move  -  W jump  -  E vent (+water)  -  hold Q water (-water)  -  F drain", {
+      .text(scene.scale.width / 2, scene.scale.height - 10, "A/D move  -  W jump  -  E vent (+pressure)  -  hold Q flush (-pressure)  -  F drain", {
         fontFamily: "monospace",
         fontSize: "12px",
         color: "#ffffff",
@@ -355,7 +355,7 @@ export class UIManager {
   }
 
   private readonly defaultHint =
-    "A/D move  -  W jump  -  E vent (+water)  -  hold Q water (-water)  -  F drain";
+    "A/D move  -  W jump  -  E vent (+pressure)  -  hold Q flush (-pressure)  -  F drain";
 
   setLevel(current: number, total: number, name: string) {
     this.levelLabel.setText(`LEVEL ${current}/${total}  ${name}`);

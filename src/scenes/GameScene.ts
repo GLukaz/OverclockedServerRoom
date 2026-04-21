@@ -414,7 +414,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Vent cooldown label above player
-    this.ventLabel.setPosition(this.player.x, this.player.y - 34);
+    this.ventLabel.setPosition(this.player.x, this.player.y - 43);
     if (this.ventGlobalCooldown <= 0) {
       this.ventLabel.setText("[E]");
       this.ventLabel.setColor("#ffe27a");

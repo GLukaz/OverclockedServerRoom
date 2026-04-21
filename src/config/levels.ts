@@ -147,7 +147,6 @@ export const LEVELS: LevelConfig[] = [
       { x: 780, y: 440, w: 160, h: 18 },
       { x: 350, y: 320, w: 160, h: 18 },
       { x: 610, y: 320, w: 160, h: 18 },
-      { x: 480, y: 210, w: 160, h: 18 },
     ],
     servers: [
       { x: 350, y: 455 },
