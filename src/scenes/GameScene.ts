@@ -5,6 +5,7 @@ import { DrainValve } from "../entities/DrainValve";
 import { ElectricHazard } from "../entities/ElectricHazard";
 import { SteamPipe } from "../entities/SteamPipe";
 import { UIManager } from "../ui/UIManager";
+import { QuipSystem } from "../ui/QuipSystem";
 import { EventManager } from "../events/EventManager";
 import { LevelEditor } from "../editor/LevelEditor";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
@@ -45,6 +46,7 @@ export class GameScene extends Phaser.Scene {
   private drain!: DrainValve;
   private drainSpec!: { x: number; y: number };
   private ui!: UIManager;
+  private quips!: QuipSystem;
   private eventManager!: EventManager;
   private editor!: LevelEditor;
 
@@ -69,6 +71,8 @@ export class GameScene extends Phaser.Scene {
   private bursting = false;
   private burstLabel!: Phaser.GameObjects.Text;
   private drainHoldMs = 0;
+  private overclockHighFired = false;
+  private wasTired = false;
 
   constructor() {
     super("GameScene");
@@ -102,6 +106,8 @@ export class GameScene extends Phaser.Scene {
     this.burstTimer = 0;
     this.bursting = false;
     this.drainHoldMs = 0;
+    this.overclockHighFired = false;
+    this.wasTired = false;
 
     // this.drawBackdrop();
     const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, "bg-servers-2");
@@ -175,6 +181,8 @@ export class GameScene extends Phaser.Scene {
       .setVisible(false);
 
     this.ui = new UIManager(this);
+    this.quips = new QuipSystem(this, this.player);
+    this.time.delayedCall(2400, () => this.quips.trigger("onLevelStart"));
 
     this.eventManager = new EventManager(
       this,
@@ -268,6 +276,7 @@ export class GameScene extends Phaser.Scene {
     if (this.overclock >= 100) {
       if (this.levelIndex + 1 < LEVELS.length) {
         this.transitioning = true;
+        this.quips.trigger("onLevelClear");
         this.ui.showBanner(`LEVEL ${this.levelIndex + 1} CLEARED`, "#2ee66b");
         this.time.delayedCall(1400, () => {
           this.scene.restart({ levelIndex: this.levelIndex + 1 });
@@ -280,6 +289,13 @@ export class GameScene extends Phaser.Scene {
     }
     const overclockFactor = 1 + this.overclock / 50;
 
+    if (!this.overclockHighFired && this.overclock >= 80) {
+      this.overclockHighFired = true;
+      this.quips.trigger("onOverclockHigh");
+    } else if (this.overclockHighFired && this.overclock < 65) {
+      this.overclockHighFired = false;
+    }
+
     const pBody = this.player.body as Phaser.Physics.Arcade.Body;
     for (const hz of this.hazards) {
       hz.update(delta);
@@ -288,6 +304,7 @@ export class GameScene extends Phaser.Scene {
           this.player.paralyze(PARALYZE_MS);
           this.flashBurst(this.player.x, this.player.y, 0xffe27a);
           this.ui.setHint("ZAPPED! cool down...");
+          this.quips.trigger("onZapped");
           pBody.setVelocityY(-260);
         }
       }
@@ -315,6 +332,7 @@ export class GameScene extends Phaser.Scene {
       );
       if (s.heat >= 100) {
         s.fail();
+        this.quips.trigger("onServerFail");
         continue;
       }
       const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
@@ -355,6 +373,7 @@ export class GameScene extends Phaser.Scene {
       }
       if (ventedCount > 0) {
         this.waterLevel = Phaser.Math.Clamp(this.waterLevel + VENT_WATER_GAIN * ventedCount, 0, 100);
+        this.quips.trigger("onVent");
       }
     }
 
@@ -403,6 +422,7 @@ export class GameScene extends Phaser.Scene {
         this.waterLevel = 0;
         this.drainHoldMs = 0;
         this.flashBurst(this.drain.x, this.drain.y, 0x4ab0ff);
+        this.quips.trigger("onDrain");
       }
     } else if (this.drainHoldMs > 0) {
       this.drainHoldMs = Math.max(0, this.drainHoldMs - delta * 1.5);
@@ -433,6 +453,10 @@ export class GameScene extends Phaser.Scene {
       this.player.isTired
     );
 
+    if (this.player.isTired && !this.wasTired) this.quips.trigger("onLowStamina");
+    this.wasTired = this.player.isTired;
+    this.quips.update(delta);
+
     if (aliveCount === 0) {
       this.gameOver = true;
       this.ui.showGameOver("ALL SERVERS FAILED", "#ff4a4a");
@@ -444,6 +468,7 @@ export class GameScene extends Phaser.Scene {
       this.burstTimer = BURST_TIMEOUT_MS;
       this.burstLabel.setVisible(true);
       this.ui.showBanner("OVERPRESSURE! DRAIN NOW!", "#ff4a4a");
+      this.quips.trigger("onOverpressure");
     }
     if (this.bursting) {
       this.burstTimer -= delta;
