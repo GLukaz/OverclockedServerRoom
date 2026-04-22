@@ -40,8 +40,8 @@ export class LoadingScene extends Phaser.Scene {
       .setOrigin(0.5);
 
 
-    this.load.image("bg-servers-2", "assets/bg-servers-2.png");
-    this.load.image("title", "assets/title.png");
+    this.load.image("bg-servers-2", "assets/bg-servers-2.webp");
+    this.load.image("title", "assets/title.webp");
     this.load.image("platform", "assets/platform.png");
     this.load.image("server_green", "assets/server-green.png");
     this.load.image("server_yellow", "assets/server-yellow.png");

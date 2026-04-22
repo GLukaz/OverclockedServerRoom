@@ -36,9 +36,9 @@ export const SFX_ASSETS: { key: SfxKey; paths: string[] }[] = [
 ];
 
 export const MUSIC_ASSETS: { key: MusicKey; paths: string[] }[] = [
-  { key: "music_menu", paths: ["assets/audio/music_menu.mp3"] },
+  { key: "music_menu", paths: ["assets/audio/music_game.mp3"] },
   { key: "music_game", paths: ["assets/audio/music_game.mp3"] },
-  { key: "music_tension", paths: ["assets/audio/music_tension.mp3"] },
-  { key: "music_game_over", paths: ["assets/audio/music_game_over.mp3"] },
-  { key: "music_win", paths: ["assets/audio/music_win.mp3"] },
+  { key: "music_tension", paths: ["assets/audio/music_game.mp3"] },
+  { key: "music_game_over", paths: ["assets/audio/music_game.mp3"] },
+  { key: "music_win", paths: ["assets/audio/music_game.mp3"] },
 ];
